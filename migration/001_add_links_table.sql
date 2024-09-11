@@ -1,5 +1,6 @@
 CREATE TABLE links
 (
-    original  TEXT NOT NULL,
-    shortened TEXT NOT NULL
+    id        SERIAL PRIMARY KEY,
+    original  TEXT UNIQUE NOT NULL,
+    shortened TEXT UNIQUE NOT NULL
 );
