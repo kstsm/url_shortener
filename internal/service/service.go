@@ -13,33 +13,41 @@ func GetOriginalByShortened(shortened string) (string, error) {
 		return "", err
 	}
 
-	// ToDo: добавить префикс
-
 	return original, nil
 }
 
-func GetLinks() ([]models.Link, error) {
+func GetLinks() ([]*models.Link, error) {
 	links, err := repository.GetLinks()
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
-	// ToDo: добавить префикс
+	prefix := "http://localhost:8090/"
+
+	for _, link := range links {
+		link.Shortened = prefix + link.Shortened
+	}
 
 	return links, nil
 }
 
-func GetLinkByID(linkID int) (models.Link, error) {
+func GetLinkByID(linkID int) (*models.Link, error) {
 	link, err := repository.GetLinkByID(linkID)
 	if err != nil {
-		fmt.Println(err)
-		return models.Link{}, err
+		return nil, err
 	}
 
-	// ToDo: добавить префикс
 	prefix := "http://localhost:8090/"
 	link.Shortened = prefix + link.Shortened
 
 	return link, nil
+}
+
+func DeleteLink(linkID int) error {
+	err := repository.DeleteLink(linkID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

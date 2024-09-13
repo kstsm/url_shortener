@@ -2,10 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
 	"strconv"
+	"url_shortener/internal/cerrors"
 	"url_shortener/internal/service"
 )
 
@@ -35,7 +38,12 @@ func getOriginalByShortened(w http.ResponseWriter, r *http.Request) {
 
 	original, err := service.GetOriginalByShortened(shortened)
 	if err != nil {
-		mJson, _ := json.Marshal(map[string]string{"message": "Ошибка при получении ссылки"})
+		mJson, err := json.Marshal(map[string]string{"message": "Ошибка при получении ссылки"})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(mJson)
 		return
@@ -49,7 +57,12 @@ func getLinks(w http.ResponseWriter, r *http.Request) {
 
 	links, err := service.GetLinks()
 	if err != nil {
-		mJson, _ := json.Marshal(map[string]string{"message": "Ошибка при получении ссылок"})
+		mJson, err := json.Marshal(map[string]string{"message": "Ошибка при получении ссылок"})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(mJson)
 		return
@@ -57,7 +70,7 @@ func getLinks(w http.ResponseWriter, r *http.Request) {
 
 	response, err := json.Marshal(links)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -75,7 +88,11 @@ func getLinkByID(w http.ResponseWriter, r *http.Request) {
 
 	link, err := service.GetLinkByID(linkID)
 	if err != nil {
-		mJson, _ := json.Marshal(map[string]string{"message": "Ошибка при получении ссылки"})
+		mJson, err := json.Marshal(map[string]string{"message": "Ошибка при получении ссылки"})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(mJson)
 		return
@@ -83,7 +100,7 @@ func getLinkByID(w http.ResponseWriter, r *http.Request) {
 
 	response, err := json.Marshal(link)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -91,37 +108,39 @@ func getLinkByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteLink(w http.ResponseWriter, r *http.Request) {
-	/*w.Header().Set("Content-Type", "application/json")
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	w.Header().Set("Content-Type", "application/json")
+
+	linkID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	_, exists := storage[id]
-	if !exists {
-		mJson, err := json.Marshal(map[string]string{
-			"message": fmt.Sprintf("Пользователь с ID = %d не найден", id),
-		})
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		w.WriteHeader(http.StatusNotFound)
-		w.Write(mJson)
-		return
-	}
-
-	delete(storage, id)
-
-	response, err := json.Marshal(map[string]string{
-		"message": fmt.Sprintf("Пользователь с ID = %d удален", id),
-	})
+	err = service.DeleteLink(linkID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		if errors.Is(cerrors.ErrNotFound, err) {
+			mJson, err := json.Marshal(map[string]string{"message": fmt.Sprintf("Cсылка с ID = %d не найдена", linkID)})
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			w.WriteHeader(http.StatusNotFound)
+			w.Write(mJson)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Write(response)*/
+	response, err := json.Marshal(map[string]int{"id": linkID})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(response)
 }
 
 func createLink(w http.ResponseWriter, r *http.Request) {

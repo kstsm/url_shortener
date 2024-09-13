@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"url_shortener/internal/cerrors"
 	"url_shortener/internal/models"
 )
 
@@ -31,42 +32,57 @@ func GetOriginalByShortened(shortened string) (string, error) {
 	return original, nil
 }
 
-func GetLinks() ([]models.Link, error) {
+func GetLinks() ([]*models.Link, error) {
 	rows, err := db.Query(`SELECT id, original, shortened FROM links;`)
 	if err != nil {
-		fmt.Println(err)
-		return []models.Link{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	var links []models.Link
+	var links []*models.Link
 	for rows.Next() {
 		var link models.Link
 
 		err = rows.Scan(&link.ID, &link.Original, &link.Shortened)
 		if err != nil {
-			fmt.Println(err)
-			return []models.Link{}, err
+			return nil, err
 		}
 
-		links = append(links, link)
+		links = append(links, &link)
 	}
 
 	return links, nil
 }
 
-func GetLinkByID(linkID int) (models.Link, error) {
+func GetLinkByID(linkID int) (*models.Link, error) {
 	row := db.QueryRow(`SELECT id, original, shortened FROM links WHERE id = $1;`, linkID)
 
 	var link models.Link
 
 	err := row.Scan(&link.ID, &link.Original, &link.Shortened)
 	if err != nil {
-		fmt.Println(err)
-		return models.Link{}, err
+		return nil, err
 	}
 
-	return link, nil
+	return &link, nil
+}
+
+func DeleteLink(linkID int) error {
+	tag, err := db.Exec(`DELETE FROM links WHERE id = $1;`, linkID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := tag.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return cerrors.ErrNotFound
+	}
+
+	return nil
 }
 
 func init() {
@@ -79,7 +95,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	//defer conn.Close()
 
 	err = conn.Ping()
 	if err != nil {
