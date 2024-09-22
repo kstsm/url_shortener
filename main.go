@@ -1,9 +1,9 @@
 package main
 
 import (
-	"url_shortener/cmd/url_shortener"
+	"url_shortener/cmd"
 )
 
 func main() {
-	url_shortener.Run()
+	cmd.Execute()
 }

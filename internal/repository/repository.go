@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 	"url_shortener/internal/cerrors"
 	"url_shortener/internal/models"
+	"url_shortener/internal/repository/queries"
 )
 
 const (
@@ -32,6 +33,28 @@ func GetOriginalByShortened(shortened string) (string, error) {
 	return original, nil
 }
 
+func CreateLink(original, shortened, title string, user models.User) (*models.Link, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	row := tx.QueryRow(queries.CreateLink, original, shortened)
+
+	var link models.Link
+	err = row.Scan(&link.ChatID, &link.Original, &link.Shortened)
+	if err != nil {
+		return nil, fmt.Errorf("row.Scan: %w", err)
+	}
+
+	_, err = tx.Exec(queries.CreateTgLinks, link.ChatID, user.ChatID, title) //toDo: Upsert
+	if err != nil {
+		return nil, fmt.Errorf("tx.Exec: CreateTgLinks: %w", err)
+	}
+
+	return &link, tx.Commit()
+}
+
 func GetLinks() ([]*models.Link, error) {
 	rows, err := db.Query(`SELECT id, original, shortened FROM links;`)
 	if err != nil {
@@ -43,7 +66,7 @@ func GetLinks() ([]*models.Link, error) {
 	for rows.Next() {
 		var link models.Link
 
-		err = rows.Scan(&link.ID, &link.Original, &link.Shortened)
+		err = rows.Scan(&link.ChatID, &link.Original, &link.Shortened)
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +82,7 @@ func GetLinkByID(linkID int) (*models.Link, error) {
 
 	var link models.Link
 
-	err := row.Scan(&link.ID, &link.Original, &link.Shortened)
+	err := row.Scan(&link.ChatID, &link.Original, &link.Shortened)
 	if err != nil {
 		return nil, err
 	}
