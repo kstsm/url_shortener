@@ -24,7 +24,7 @@ var Run = &cobra.Command{
 			bot.WithDefaultHandler(handler),
 		}
 
-		b, err := bot.New("6365489606:AAFS-sQzKVlFr6Bhv5y4DP2R7K0zg9G8zUY", opts...)
+		b, err := bot.New("", opts...)
 		if err != nil {
 			panic(err)
 		}
